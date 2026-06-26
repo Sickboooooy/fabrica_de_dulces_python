@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fábrica de Dulces · Aprende Python con un Robot</title>
+<style>
+  :root{
+    --crema:#fff7f0; --rosa:#ffd9e3; --rosa2:#ffe6ee; --menta:#bff3df;
+    --lila:#e7dcff; --limon:#fff1b8; --fresa:#ff6f91; --naranja:#ff8a3d;
+    --naranja-osc:#e6701f; --tinta:#3a2e3a; --gris:#8a7d86; --linea:#f0dfe6;
+    --ok:#1faa6a; --err:#e23d57; --sombra:0 8px 24px rgba(120,70,80,.12);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:linear-gradient(160deg,#fff7f0,#ffeef4 60%,#f3ecff);
+    color:var(--tinta); min-height:100vh; padding:18px;
+  }
+  .wrap{max-width:1080px; margin:0 auto}
+  header.top{
+    display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;
+  }
+  .logo{
+    width:46px;height:46px;border-radius:14px;background:var(--naranja);
+    display:grid;place-items:center;font-size:26px;box-shadow:var(--sombra);
+  }
+  h1{font-size:1.35rem;margin:0;line-height:1.1}
+  h1 small{display:block;font-size:.78rem;font-weight:500;color:var(--gris);margin-top:3px}
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:16px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:#fff;border:1px solid var(--linea);border-radius:18px;
+    padding:16px;box-shadow:var(--sombra);
+  }
+  .nivelbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .nivelbar .titulo{font-weight:700;font-size:1.05rem}
+  .badge{
+    font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;
+    background:var(--lila);color:#6b4bbd;
+  }
+  .objetivo{font-size:.92rem;line-height:1.45;background:var(--rosa2);
+    border-radius:12px;padding:10px 12px;margin-bottom:12px}
+  canvas{width:100%;height:auto;display:block;border-radius:14px;background:var(--crema)}
+  .estado{
+    margin-top:10px;min-height:24px;font-size:.9rem;font-weight:600;
+    display:flex;align-items:center;gap:8px;
+  }
+  .estado.ok{color:var(--ok)} .estado.err{color:var(--err)} .estado.info{color:var(--gris)}
+  /* panel derecho */
+  .editor-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .editor-head b{font-size:.95rem}
+  textarea{
+    width:100%;height:210px;resize:vertical;border:1px solid var(--linea);
+    border-radius:12px;padding:12px;font-family:'Consolas','SF Mono',monospace;
+    font-size:14px;line-height:1.5;color:#2d2330;background:#fffdfb;tab-size:4;
+  }
+  textarea:focus{outline:2px solid var(--naranja);border-color:transparent}
+  .botones{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  button{
+    border:0;border-radius:11px;padding:10px 14px;font-weight:700;font-size:.9rem;
+    cursor:pointer;transition:transform .05s, filter .15s;
+  }
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .b-run{background:var(--naranja);color:#fff;flex:1}
+  .b-run:hover:not(:disabled){filter:brightness(1.05)}
+  .b-reset{background:#f1e7ec;color:var(--tinta)}
+  .b-next{background:var(--ok);color:#fff;display:none}
+  .ref{margin-top:14px}
+  .ref h3{font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--gris);margin:0 0 8px}
+  .cmd{
+    display:flex;gap:8px;align-items:flex-start;font-size:.85rem;
+    padding:6px 0;border-bottom:1px dashed var(--linea);
+  }
+  .cmd code{
+    background:#2d2330;color:#ffd9a0;padding:2px 7px;border-radius:7px;
+    font-family:'Consolas',monospace;font-size:.82rem;white-space:nowrap;
+  }
+  .cmd span{color:var(--gris);line-height:1.4}
+  .pista{
+    margin-top:10px;font-size:.85rem;color:#6b4bbd;background:var(--lila);
+    border-radius:10px;padding:8px 11px;display:none;line-height:1.45;
+  }
+  .pista.show{display:block}
+  .link{background:none;border:0;color:var(--naranja-osc);font-weight:700;
+    cursor:pointer;font-size:.8rem;padding:0;text-decoration:underline}
+  .pies{margin-top:12px;font-size:.72rem;color:var(--gris);text-align:center}
+  /* confetti dulce */
+  .conf{position:fixed;top:-30px;font-size:22px;animation:caer linear forwards;z-index:50;pointer-events:none}
+  @keyframes caer{to{transform:translateY(110vh) rotate(360deg);opacity:.9}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">🍬</div>
+    <div>
+      <h1>Fábrica de Dulces
+        <small>Aprende lo básico de Python programando a un robot · por Itosturre</small>
+      </h1>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- COLUMNA IZQUIERDA: la fábrica -->
+    <section class="card">
+      <div class="nivelbar">
+        <span class="titulo" id="nivelTitulo">Nivel 1</span>
+        <span class="badge" id="conceptoBadge">Concepto: Secuencia</span>
+      </div>
+      <div class="objetivo" id="objetivo"></div>
+      <canvas id="lienzo" width="560" height="280"></canvas>
+      <div class="estado info" id="estado">Escribe tu código y presiona <b>&nbsp;Ejecutar</b>.</div>
+    </section>
+
+    <!-- COLUMNA DERECHA: el editor -->
+    <aside class="card">
+      <div class="editor-head">
+        <b>📝 Tu código Python</b>
+        <button class="link" id="btnPista">Mostrar pista</button>
+      </div>
+      <textarea id="codigo" spellcheck="false"></textarea>
+      <div class="pista" id="pista"></div>
+      <div class="botones">
+        <button class="b-run" id="btnRun">▶ Ejecutar</button>
+        <button class="b-reset" id="btnReset">↺ Reiniciar</button>
+        <button class="b-next" id="btnNext">Siguiente nivel →</button>
+      </div>
+
+      <div class="ref">
+        <h3>Comandos del robot</h3>
+        <div class="cmd"><code>avanzar()</code><span>da un paso hacia donde mira</span></div>
+        <div class="cmd"><code>girar_derecha()</code><span>gira 90° a la derecha</span></div>
+        <div class="cmd"><code>girar_izquierda()</code><span>gira 90° a la izquierda</span></div>
+        <div class="cmd"><code>recoger()</code><span>recoge el dulce de su casilla</span></div>
+        <div class="cmd"><code>hay_dulce()</code><span>¿hay un dulce en su casilla? (True/False)</span></div>
+        <div class="cmd"><code>puede_avanzar()</code><span>¿la casilla de enfrente está libre? (True/False)</span></div>
+        <div class="cmd"><code>for _ in range(3):</code><span>repite las líneas indentadas 3 veces</span></div>
+        <div class="cmd"><code>if hay_dulce():</code><span>haz lo de adentro solo si es verdadero</span></div>
+        <div class="cmd"><code>else:</code><span>si no, haz lo de adentro del else</span></div>
+        <div class="cmd"><code>while puede_avanzar():</code><span>repite MIENTRAS la condición sea verdadera</span></div>
+        <div class="cmd"><code>not</code><span>invierte una condición: <code>while not hay_dulce():</code></span></div>
+      </div>
+      <div class="pies">⚠️ Versión inicial · Parte 3 — seguimos construyendo poco a poco</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ===================================================================
+   FÁBRICA DE DULCES — motor del juego
+   Todo en un solo archivo, sin dependencias. Comentado en español
+   por si quieres leer cómo funciona el "mini-Python".
+   =================================================================== */
+
+// Direcciones: 0=Este(→) 1=Sur(↓) 2=Oeste(←) 3=Norte(↑)
+const DIRS = [
+  {dx:1, dy:0}, {dx:0, dy:1}, {dx:-1, dy:0}, {dx:0, dy:-1}
+];
+const CELL = 70; // tamaño de cada casilla en píxeles
+const SENSORES = ['hay_dulce','puede_avanzar']; // condiciones que el robot puede percibir
+
+// ---- Definición de niveles ----
+const NIVELES = [
+  {
+    titulo:"Nivel 1 · El primer dulce",
+    concepto:"Concepto: Secuencia",
+    objetivo:"El robot 🤖 debe llegar al dulce 🍬 y recogerlo. Las instrucciones se ejecutan <b>en orden, una tras otra</b>.",
+    cols:5, filas:3,
+    robot:{x:0,y:1,dir:0},
+    dulces:[{x:3,y:1}],
+    obstaculos:[],
+    pista:"El robot mira a la derecha. Avanza 3 casillas y luego recoge:<br><code>avanzar()</code> ×3 y al final <code>recoger()</code>.",
+    inicio:"# Lleva el robot hasta el dulce y recógelo\navanzar()\n"
+  },
+  {
+    titulo:"Nivel 2 · La esquina",
+    concepto:"Concepto: Giros",
+    objetivo:"Ahora el dulce está en una esquina. Tendrás que <b>girar</b> al robot para cambiar su dirección.",
+    cols:5, filas:4,
+    robot:{x:0,y:0,dir:0},
+    dulces:[{x:3,y:2}],
+    obstaculos:[{x:1,y:1},{x:1,y:2}],
+    pista:"Avanza 3 a la derecha, gira a la derecha (ahora mira hacia abajo), avanza 2 y recoge.",
+    inicio:"# Avanza, gira y vuelve a avanzar\navanzar()\navanzar()\navanzar()\ngirar_derecha()\n"
+  },
+  {
+    titulo:"Nivel 3 · Línea de producción",
+    concepto:"Concepto: Ciclos for",
+    objetivo:"¡Hay 6 dulces en fila! Escribirlo a mano sería larguísimo. Usa un <b>ciclo for</b> para repetir el mismo paso varias veces.",
+    cols:8, filas:3,
+    robot:{x:0,y:1,dir:0},
+    dulces:[{x:1,y:1},{x:2,y:1},{x:3,y:1},{x:4,y:1},{x:5,y:1},{x:6,y:1}],
+    obstaculos:[],
+    pista:"Cada dulce se recoge avanzando y luego recogiendo. Repite eso 6 veces:<br><code>for _ in range(6):</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>avanzar()</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>recoger()</code><br>(usa <b>Tab</b> para indentar)",
+    inicio:"# Repite el mismo bloque 6 veces con un ciclo\nfor _ in range(6):\n    avanzar()\n    recoger()\n"
+  },
+  {
+    titulo:"Nivel 4 · El almacén en L",
+    concepto:"Concepto: Combinar todo",
+    objetivo:"Recoge los 5 dulces en forma de <b>L</b>. Combina <b>ciclos</b> y <b>giros</b> para resolverlo de forma elegante.",
+    cols:6, filas:5,
+    robot:{x:0,y:0,dir:0},
+    dulces:[{x:1,y:0},{x:2,y:0},{x:3,y:0},{x:3,y:1},{x:3,y:2}],
+    obstaculos:[{x:0,y:2},{x:1,y:3}],
+    pista:"Primero un <code>for</code> de 3 para la fila de arriba. Luego <code>girar_derecha()</code> y otro <code>for</code> de 2 para bajar.",
+    inicio:"# Recoge la fila, gira y recoge la columna\nfor _ in range(3):\n    avanzar()\n    recoger()\ngirar_derecha()\n"
+  },
+  {
+    titulo:"Nivel 5 · Inspección salteada",
+    concepto:"Concepto: Decisiones",
+    objetivo:"Los dulces están <b>salteados</b> por el pasillo: no hay uno en cada casilla. Recoger siempre no sirve; el robot debe <b>decidir</b>. Usa <code>if hay_dulce():</code> para recoger solo cuando perciba uno.",
+    cols:9, filas:3,
+    robot:{x:0,y:1,dir:0},
+    dulces:[{x:2,y:1},{x:4,y:1},{x:5,y:1},{x:8,y:1}],
+    obstaculos:[],
+    pista:"Después de cada <code>avanzar()</code>, pregunta con un <code>if</code> antes de recoger:<br><code>for _ in range(8):</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>avanzar()</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>if hay_dulce():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>recoger()</code><br>El mismo bloque sirve aunque cambien las casillas.",
+    inicio:"# Los dulces están salteados: no están en todas las casillas.\n# Avanza por el pasillo y recoge SOLO si hay un dulce.\nfor _ in range(8):\n    avanzar()\n"
+  },
+  {
+    titulo:"Nivel 6 · El mismo plan, otro pasillo",
+    concepto:"Concepto: Decisiones",
+    objetivo:"Los dulces están en <b>otras</b> casillas… pero el truco es el mismo. Comprueba que <b>un solo programa</b> resuelve los dos niveles: el <code>if</code> hace que el robot reaccione a lo que percibe.",
+    cols:9, filas:3,
+    robot:{x:0,y:1,dir:0},
+    dulces:[{x:1,y:1},{x:3,y:1},{x:6,y:1},{x:7,y:1}],
+    obstaculos:[],
+    pista:"No necesitas cambiar nada: el <code>if hay_dulce()</code> hace que el robot decida en CADA casilla. Por eso el mismo código resuelve tableros distintos. Pulsa Ejecutar y compruébalo.",
+    inicio:"# ¡El mismo programa del nivel anterior! Los dulces cambiaron de lugar,\n# pero el robot decide solo. Pulsa Ejecutar y míralo funcionar.\nfor _ in range(8):\n    avanzar()\n    if hay_dulce():\n        recoger()\n"
+  },
+  {
+    titulo:"Nivel 7 · La clasificadora",
+    concepto:"Concepto: if / else",
+    objetivo:"El robot rodea la máquina recogiendo los dulces del borde. Pero en las <b>esquinas no hay dulce</b>: ahí debe <b>girar</b>. Usa <code>if / else</code>: una acción si hay dulce y <b>otra distinta</b> si no.",
+    cols:5, filas:5,
+    robot:{x:0,y:0,dir:0},
+    dulces:[
+      {x:1,y:0},{x:2,y:0},{x:3,y:0},
+      {x:4,y:1},{x:4,y:2},{x:4,y:3},
+      {x:3,y:4},{x:2,y:4},{x:1,y:4},
+      {x:0,y:3},{x:0,y:2},{x:0,y:1}
+    ],
+    obstaculos:[{x:2,y:2}],
+    pista:"Recorre el borde con un ciclo. Si hay dulce, recógelo; <b>si no</b> (estás en una esquina), gira:<br><code>for _ in range(15):</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>avanzar()</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>if hay_dulce():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>recoger()</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>else:</code><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>girar_derecha()</code>",
+    inicio:"# El robot rodea la máquina recogiendo los dulces del borde.\n# En las esquinas NO hay dulce... ¿qué debería hacer ahí?\nfor _ in range(15):\n    avanzar()\n    if hay_dulce():\n        recoger()\n"
+  },
+  {
+    titulo:"Nivel 8 · El pasillo de largo desconocido",
+    concepto:"Concepto: while",
+    objetivo:"Este pasillo es de largo <b>desconocido</b>: un <code>for</code> no sirve porque no sabes cuántas casillas tiene. Avanza <b>mientras puedas</b> con <code>while puede_avanzar():</code> y recoge lo que encuentres.",
+    cols:12, filas:3,
+    robot:{x:0,y:1,dir:0},
+    dulces:[{x:2,y:1},{x:4,y:1},{x:7,y:1},{x:9,y:1},{x:11,y:1}],
+    obstaculos:[],
+    pista:"<code>while</code> repite mientras la condición sea verdadera. Cuando el robot llegue a la pared, <code>puede_avanzar()</code> será falso y el ciclo parará solo:<br><code>while puede_avanzar():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>avanzar()</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>if hay_dulce():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>recoger()</code>",
+    inicio:"# No sabes cuántas casillas tiene el pasillo.\n# Avanza MIENTRAS puedas y recoge lo que encuentres.\nwhile puede_avanzar():\n    avanzar()\n"
+  },
+  {
+    titulo:"Nivel 9 · Limpieza total",
+    concepto:"Concepto: while + not",
+    objetivo:"Recorrido en <b>L</b>. Primero cruza el túnel <b>hasta toparte</b> con el dulce de la esquina usando <code>while not hay_dulce():</code>. Luego gira y <b>baja barriendo</b> el resto con <code>while puede_avanzar()</code>.",
+    cols:6, filas:5,
+    robot:{x:0,y:0,dir:0},
+    dulces:[{x:4,y:0},{x:4,y:1},{x:4,y:3},{x:4,y:4}],
+    obstaculos:[],
+    pista:"<b>not</b> invierte una condición: <code>while not hay_dulce()</code> avanza MIENTRAS NO haya dulce, así que se detiene justo sobre él.<br><code>while not hay_dulce():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>avanzar()</code><br><code>recoger()</code><br><code>girar_derecha()</code><br><code>while puede_avanzar():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>avanzar()</code><br>&nbsp;&nbsp;&nbsp;&nbsp;<code>if hay_dulce():</code><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>recoger()</code>",
+    inicio:"# 1) Cruza el túnel hasta el dulce de la esquina.\nwhile not hay_dulce():\n    avanzar()\nrecoger()\n# 2) Gira y baja recogiendo el resto...\ngirar_derecha()\n"
+  }
+];
+
+// ---- Estado actual ----
+let nivelIdx = 0;
+let mundo;        // estado vivo que se dibuja
+let animando = false;
+
+const cv  = document.getElementById('lienzo');
+const ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+function clon(o){ return JSON.parse(JSON.stringify(o)); }
+
+function cargarNivel(i){
+  nivelIdx = i;
+  const N = NIVELES[i];
+  cv.width  = N.cols * CELL;
+  cv.height = N.filas * CELL;
+  mundo = { robot:clon(N.robot), dulces:clon(N.dulces) };
+  $('nivelTitulo').textContent = N.titulo;
+  $('conceptoBadge').textContent = N.concepto;
+  $('objetivo').innerHTML = N.objetivo;
+  $('codigo').value = N.inicio;
+  $('pista').innerHTML = N.pista;
+  $('pista').classList.remove('show');
+  $('btnPista').textContent = 'Mostrar pista';
+  $('btnNext').style.display = 'none';
+  setEstado('info', 'Escribe tu código y presiona Ejecutar.');
+  dibujar(mundo);
+}
+
+// ---- Dibujo ----
+function dibujar(m){
+  const N = NIVELES[nivelIdx];
+  // piso tipo ajedrez de caramelo
+  for(let y=0;y<N.filas;y++){
+    for(let x=0;x<N.cols;x++){
+      ctx.fillStyle = (x+y)%2 ? '#ffeef4' : '#fff7f0';
+      ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
+    }
+  }
+  // líneas de rejilla
+  ctx.strokeStyle = '#f3dde6'; ctx.lineWidth = 1;
+  for(let x=0;x<=N.cols;x++){ ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,cv.height);ctx.stroke(); }
+  for(let y=0;y<=N.filas;y++){ ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(cv.width,y*CELL);ctx.stroke(); }
+
+  // obstáculos (máquinas)
+  N.obstaculos.forEach(o=>dibujarMaquina(o.x,o.y));
+  // dulces
+  m.dulces.forEach((d,i)=>dibujarDulce(d.x,d.y,i));
+  // robot
+  dibujarRobot(m.robot);
+}
+
+function dibujarMaquina(gx,gy){
+  const x=gx*CELL, y=gy*CELL, p=8;
+  ctx.fillStyle='#6c5b6f';
+  redondeado(x+p,y+p,CELL-2*p,CELL-2*p,10); ctx.fill();
+  // engrane
+  const cx=x+CELL/2, cy=y+CELL/2, r=14;
+  ctx.fillStyle='#aa98ad';
+  for(let a=0;a<8;a++){
+    const ang=a*Math.PI/4;
+    ctx.beginPath();
+    ctx.arc(cx+Math.cos(ang)*r, cy+Math.sin(ang)*r, 5, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#6c5b6f';ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill();
+}
+
+const COLORES_DULCE = ['#ff6f91','#ffb13d','#36c2a6','#7b6bff','#ff8a3d','#ff4d8d'];
+function dibujarDulce(gx,gy,i){
+  const cx=gx*CELL+CELL/2, cy=gy*CELL+CELL/2, r=15;
+  const c = COLORES_DULCE[i % COLORES_DULCE.length];
+  // envoltura (triángulos a los lados)
+  ctx.fillStyle=c;
+  ctx.beginPath();ctx.moveTo(cx-r-9,cy-8);ctx.lineTo(cx-r,cy);ctx.lineTo(cx-r-9,cy+8);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(cx+r+9,cy-8);ctx.lineTo(cx+r,cy);ctx.lineTo(cx+r+9,cy+8);ctx.closePath();ctx.fill();
+  // cuerpo
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  // brillo
+  ctx.fillStyle='rgba(255,255,255,.55)';
+  ctx.beginPath();ctx.arc(cx-5,cy-5,4.5,0,Math.PI*2);ctx.fill();
+}
+
+function dibujarRobot(rb){
+  const cx=rb.x*CELL+CELL/2, cy=rb.y*CELL+CELL/2;
+  const x=rb.x*CELL+12, y=rb.y*CELL+12, w=CELL-24;
+  // sombra
+  ctx.fillStyle='rgba(120,70,80,.18)';
+  ctx.beginPath();ctx.ellipse(cx,cy+w/2+4,w/2.4,6,0,0,Math.PI*2);ctx.fill();
+  // antena
+  const d=DIRS[rb.dir];
+  ctx.strokeStyle='#e6701f';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(cx,cy-w/2-2);ctx.lineTo(cx,cy-w/2-12);ctx.stroke();
+  ctx.fillStyle='#ff4d8d';ctx.beginPath();ctx.arc(cx,cy-w/2-14,4,0,Math.PI*2);ctx.fill();
+  // cuerpo
+  ctx.fillStyle='#ff8a3d';
+  redondeado(x,y,w,w,14);ctx.fill();
+  ctx.strokeStyle='#e6701f';ctx.lineWidth=2;
+  redondeado(x,y,w,w,14);ctx.stroke();
+  // visor
+  ctx.fillStyle='#2d2330';
+  redondeado(cx-15,cy-12,30,20,8);ctx.fill();
+  // ojos mirando hacia la dirección
+  ctx.fillStyle='#7df9ff';
+  const ox=d.dx*5, oy=d.dy*5;
+  ctx.beginPath();ctx.arc(cx-7+ox,cy-2+oy,3.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx+7+ox,cy-2+oy,3.5,0,Math.PI*2);ctx.fill();
+  // flecha de dirección
+  ctx.fillStyle='#fff';
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(rb.dir*Math.PI/2);
+  ctx.beginPath();ctx.moveTo(w/2-4,0);ctx.lineTo(w/2-12,-5);ctx.lineTo(w/2-12,5);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+
+function redondeado(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+// ===================================================================
+//  MINI-INTÉRPRETE DE PYTHON
+//  Analiza el texto por indentación (igual que Python) y arma un
+//  árbol de instrucciones: comandos, ciclos for y condicionales if.
+// ===================================================================
+function parsear(src){
+  // 1) limpiar líneas: quitar comentarios y vacías, medir indentación
+  const lineas = [];
+  src.replace(/\t/g,'    ').split('\n').forEach((raw,idx)=>{
+    const sinComentario = raw.split('#')[0].replace(/\s+$/,'');
+    if(sinComentario.trim()==='') return;
+    const indent = sinComentario.length - sinComentario.trimStart().length;
+    lineas.push({indent, texto:sinComentario.trim(), n:idx+1});
+  });
+  if(lineas.length===0) return {ok:false, error:'Escribe al menos un comando para el robot.'};
+
+  // 2) parseo recursivo por bloques
+  function bloque(i, indent){
+    const out=[];
+    while(i<lineas.length){
+      const ln=lineas[i];
+      if(ln.indent<indent) break;
+      if(ln.indent>indent) throw {n:ln.n, msg:'Indentación inesperada: revisa los espacios al inicio de la línea.'};
+
+      const forM = ln.texto.match(/^for\s+(\w+)\s+in\s+range\s*\(\s*(\d+)\s*\)\s*:$/);
+      if(forM){
+        const veces = parseInt(forM[2],10);
+        if(i+1>=lineas.length || lineas[i+1].indent<=indent)
+          throw {n:ln.n, msg:'El "for" necesita instrucciones indentadas debajo (usa Tab).'};
+        const indentCuerpo = lineas[i+1].indent;
+        const r = bloque(i+1, indentCuerpo);
+        out.push({tipo:'for', veces, cuerpo:r.out});
+        i = r.i; continue;
+      }
+      // diagnósticos amables para errores comunes con for
+      if(/^for\b/.test(ln.texto)){
+        if(!ln.texto.endsWith(':')) throw {n:ln.n, msg:'Al "for" le faltan los dos puntos ":" al final.'};
+        if(!/range\s*\(\s*\d+\s*\)/.test(ln.texto)) throw {n:ln.n, msg:'Usa range con un número. Ejemplo: for _ in range(3):'};
+        throw {n:ln.n, msg:'No entiendo este "for". El formato es: for _ in range(3):'};
+      }
+
+      // --- Ciclo: while [not] <condicion>():  (simétrico al for) ---
+      const whileM = ln.texto.match(/^while\s+(not\s+)?(\w+)\s*\(\s*\)\s*:$/);
+      if(whileM){
+        if(!SENSORES.includes(whileM[2]))
+          throw {n:ln.n, msg:`No reconozco la condición "${whileM[2]}()". Puedes usar: hay_dulce() o puede_avanzar()`};
+        const condicion = (whileM[1]?'not ':'') + whileM[2];
+        if(i+1>=lineas.length || lineas[i+1].indent<=indent)
+          throw {n:ln.n, msg:'El "while" necesita instrucciones indentadas debajo (usa Tab).'};
+        const indentCuerpo = lineas[i+1].indent;
+        const r = bloque(i+1, indentCuerpo);
+        out.push({tipo:'while', condicion, cuerpo:r.out});
+        i = r.i; continue;
+      }
+      // diagnósticos amables para errores comunes con while
+      if(/^while\b/.test(ln.texto)){
+        if(!ln.texto.endsWith(':')) throw {n:ln.n, msg:'Al "while" le faltan los dos puntos ":" al final.'};
+        const cm = ln.texto.match(/^while\s+(?:not\s+)?(\w+)/);
+        if(cm && !SENSORES.includes(cm[1])) throw {n:ln.n, msg:`No reconozco la condición "${cm[1]}". Puedes usar: hay_dulce() o puede_avanzar()`};
+        throw {n:ln.n, msg:'No entiendo este "while". El formato es: while puede_avanzar():'};
+      }
+
+      // --- Condicional: if [not] <condicion>():  (simétrico al for) ---
+      const ifM = ln.texto.match(/^if\s+(not\s+)?(\w+)\s*\(\s*\)\s*:$/);
+      if(ifM){
+        if(!SENSORES.includes(ifM[2]))
+          throw {n:ln.n, msg:`No reconozco la condición "${ifM[2]}()". Puedes usar: hay_dulce() o puede_avanzar()`};
+        const condicion = (ifM[1]?'not ':'') + ifM[2];
+        if(i+1>=lineas.length || lineas[i+1].indent<=indent)
+          throw {n:ln.n, msg:'El "if" necesita instrucciones indentadas debajo (usa Tab).'};
+        const indentCuerpo = lineas[i+1].indent;
+        const r = bloque(i+1, indentCuerpo);
+        const nodo = {tipo:'if', condicion, cuerpo:r.out};
+        i = r.i;
+        // ¿hay un "else:" al mismo nivel que el if? (es opcional)
+        if(i<lineas.length && lineas[i].indent===indent && /^else\b/.test(lineas[i].texto)){
+          const lnElse = lineas[i];
+          if(!/^else\s*:$/.test(lnElse.texto))
+            throw {n:lnElse.n, msg:'Al "else" le faltan los dos puntos ":" al final.'};
+          if(i+1>=lineas.length || lineas[i+1].indent<=indent)
+            throw {n:lnElse.n, msg:'El "else" necesita instrucciones indentadas debajo (usa Tab).'};
+          const indentElse = lineas[i+1].indent;
+          const re = bloque(i+1, indentElse);
+          nodo.cuerpoElse = re.out;
+          i = re.i;
+        }
+        out.push(nodo);
+        continue;
+      }
+      // diagnósticos amables para errores comunes con if
+      if(/^if\b/.test(ln.texto)){
+        if(!ln.texto.endsWith(':')) throw {n:ln.n, msg:'Al "if" le faltan los dos puntos ":" al final.'};
+        const cm = ln.texto.match(/^if\s+(?:not\s+)?(\w+)/);
+        if(cm && !SENSORES.includes(cm[1])) throw {n:ln.n, msg:`No reconozco la condición "${cm[1]}". Puedes usar: hay_dulce() o puede_avanzar()`};
+        throw {n:ln.n, msg:'No entiendo este "if". El formato es: if hay_dulce():'};
+      }
+      if(/^else\b/.test(ln.texto)){
+        if(!ln.texto.endsWith(':')) throw {n:ln.n, msg:'Al "else" le faltan los dos puntos ":" al final.'};
+        throw {n:ln.n, msg:'Hay un "else" suelto: debe ir justo después del bloque de un "if".'};
+      }
+
+      const cmd = ln.texto.match(/^(avanzar|girar_derecha|girar_izquierda|recoger)\s*\(\s*\)$/);
+      if(cmd){ out.push({tipo:'cmd', nombre:cmd[1]}); i++; continue; }
+
+      const bare = ln.texto.match(/^(avanzar|girar_derecha|girar_izquierda|recoger)\b/);
+      if(bare) throw {n:ln.n, msg:`A "${bare[1]}" le faltan los paréntesis. Escribe: ${bare[1]}()`};
+
+      throw {n:ln.n, msg:`No reconozco esta línea: "${ln.texto}". Revisa la lista de comandos.`};
+    }
+    return {out, i};
+  }
+
+  try{
+    const r = bloque(0,0);
+    return {ok:true, prog:r.out};
+  }catch(e){
+    return {ok:false, error:e.msg, linea:e.n};
+  }
+}
+
+// ===================================================================
+//  SIMULACIÓN: ejecuta el árbol y graba "fotogramas" para animar.
+// ===================================================================
+function simular(prog){
+  const N = NIVELES[nivelIdx];
+  const est = { robot:clon(N.robot), dulces:clon(N.dulces) };
+  const frames = [];
+  let pasos=0; const MAX=3000;
+  let choque=false, msgChoque='';
+
+  const foto = (msg='') => frames.push({
+    robot:clon(est.robot), dulces:clon(est.dulces), msg, choque:false
+  });
+
+  function estrellar(m){
+    choque=true; msgChoque=m;
+    frames.push({robot:clon(est.robot), dulces:clon(est.dulces), msg:m, choque:true});
+  }
+
+  function comando(nombre){
+    if(nombre==='avanzar'){
+      const d=DIRS[est.robot.dir];
+      const nx=est.robot.x+d.dx, ny=est.robot.y+d.dy;
+      if(nx<0||ny<0||nx>=N.cols||ny>=N.filas){ estrellar('El robot se salió de la fábrica 🚧'); return; }
+      if(N.obstaculos.some(o=>o.x===nx&&o.y===ny)){ estrellar('El robot chocó con una máquina ⚙️'); return; }
+      est.robot.x=nx; est.robot.y=ny; foto();
+    } else if(nombre==='girar_derecha'){ est.robot.dir=(est.robot.dir+1)%4; foto(); }
+    else if(nombre==='girar_izquierda'){ est.robot.dir=(est.robot.dir+3)%4; foto(); }
+    else if(nombre==='recoger'){
+      const k=est.dulces.findIndex(c=>c.x===est.robot.x&&c.y===est.robot.y);
+      if(k>=0){ est.dulces.splice(k,1); foto('¡Dulce recogido! 🍬'); }
+      else foto('Aquí no hay ningún dulce…');
+    }
+  }
+
+  // ¿La casilla de enfrente está libre (dentro de la fábrica y sin máquina)?
+  function puedeAvanzar(){
+    const d=DIRS[est.robot.dir];
+    const nx=est.robot.x+d.dx, ny=est.robot.y+d.dy;
+    if(nx<0||ny<0||nx>=N.cols||ny>=N.filas) return false;
+    if(N.obstaculos.some(o=>o.x===nx&&o.y===ny)) return false;
+    return true;
+  }
+
+  // Lee el estado y devuelve booleano (NO modifica nada): la percepción del robot.
+  // Acepta el prefijo "not" para invertir la condición.
+  function evalCond(expr){
+    let negar=false, nombre=expr;
+    if(nombre.startsWith('not ')){ negar=true; nombre=nombre.slice(4); }
+    let val=false;
+    if(nombre==='hay_dulce') val = est.dulces.some(c=>c.x===est.robot.x && c.y===est.robot.y);
+    else if(nombre==='puede_avanzar') val = puedeAvanzar();
+    return negar ? !val : val;
+  }
+
+  function ejecutar(lista){
+    for(const s of lista){
+      if(choque) return;
+      if(pasos++ > MAX){ estrellar('Demasiados pasos (¿un ciclo infinito?).'); return; }
+      if(s.tipo==='cmd') comando(s.nombre);
+      else if(s.tipo==='for'){ for(let v=0;v<s.veces;v++){ if(choque)return; ejecutar(s.cuerpo); } }
+      else if(s.tipo==='if'){ if(evalCond(s.condicion)) ejecutar(s.cuerpo); else if(s.cuerpoElse) ejecutar(s.cuerpoElse); }
+      else if(s.tipo==='while'){
+        while(evalCond(s.condicion)){
+          if(pasos++ > MAX){ estrellar('Demasiados pasos (¿un ciclo infinito?).'); return; }
+          ejecutar(s.cuerpo);
+          if(choque) return;
+        }
+      }
+    }
+  }
+
+  foto('Inicio');
+  ejecutar(prog);
+  const gano = !choque && est.dulces.length===0;
+  return {frames, gano, choque, msgChoque, faltan: est.dulces.length};
+}
+
+// ---- Animación de los fotogramas ----
+function animar(res){
+  animando=true;
+  $('btnRun').disabled=true; $('btnReset').disabled=true;
+  let i=0;
+  const timer=setInterval(()=>{
+    const f=res.frames[i];
+    mundo={robot:f.robot, dulces:f.dulces};
+    dibujar(mundo);
+    if(f.msg) setEstado(f.choque?'err':'info', f.msg);
+    i++;
+    if(i>=res.frames.length){
+      clearInterval(timer);
+      animando=false;
+      $('btnRun').disabled=false; $('btnReset').disabled=false;
+      finalizar(res);
+    }
+  }, 300);
+}
+
+function finalizar(res){
+  if(res.gano){
+    setEstado('ok','🎉 ¡Nivel completado! Recogiste todos los dulces.');
+    if(nivelIdx < NIVELES.length-1) $('btnNext').style.display='block';
+    else setEstado('ok','🏆 ¡Terminaste toda la fábrica! Lo lograste.');
+    confeti();
+  } else if(res.choque){
+    setEstado('err','💥 '+res.msgChoque+' Ajusta tu código y vuelve a intentar.');
+  } else {
+    const ult = res.frames[res.frames.length-1];
+    const encima = ult.dulces.some(d=>d.x===ult.robot.x && d.y===ult.robot.y);
+    if(encima){
+      setEstado('err','🍬 ¡El robot está parado sobre el dulce, pero no lo recogió! Agrega recoger() al final de tu código.');
+    } else {
+      setEstado('err',`Aún falta(n) ${res.faltan} dulce(s). Lleva al robot a la casilla del dulce y usa recoger().`);
+    }
+  }
+}
+
+function confeti(){
+  const emojis=['🍬','🍭','🧁','🍫','⭐'];
+  for(let i=0;i<28;i++){
+    const e=document.createElement('div');
+    e.className='conf'; e.textContent=emojis[i%emojis.length];
+    e.style.left=Math.random()*100+'vw';
+    e.style.animationDuration=(2+Math.random()*2)+'s';
+    e.style.animationDelay=(Math.random()*0.6)+'s';
+    document.body.appendChild(e);
+    setTimeout(()=>e.remove(),4200);
+  }
+}
+
+function setEstado(tipo,txt){
+  const el=$('estado'); el.className='estado '+tipo; el.innerHTML=txt;
+}
+
+// ---- Acciones de botones ----
+function ejecutar(){
+  if(animando) return;
+  const r=parsear($('codigo').value);
+  if(!r.ok){
+    const loc = r.linea ? ` (línea ${r.linea})` : '';
+    setEstado('err','⚠️ '+r.error+loc);
+    return;
+  }
+  // reiniciar mundo visual antes de animar
+  const N=NIVELES[nivelIdx];
+  mundo={robot:clon(N.robot), dulces:clon(N.dulces)};
+  dibujar(mundo);
+  animar(simular(r.prog));
+}
+
+$('btnRun').onclick = ejecutar;
+$('btnReset').onclick = ()=>{ if(!animando) cargarNivel(nivelIdx); };
+$('btnNext').onclick = ()=>{ if(nivelIdx<NIVELES.length-1) cargarNivel(nivelIdx+1); };
+$('btnPista').onclick = ()=>{
+  const p=$('pista'); const abierto=p.classList.toggle('show');
+  $('btnPista').textContent = abierto ? 'Ocultar pista' : 'Mostrar pista';
+};
+
+// Tab en el editor inserta 4 espacios (clave para indentar el for)
+$('codigo').addEventListener('keydown', e=>{
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const ta=e.target, s=ta.selectionStart, en=ta.selectionEnd;
+    ta.value = ta.value.slice(0,s)+'    '+ta.value.slice(en);
+    ta.selectionStart=ta.selectionEnd=s+4;
+  }
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter') ejecutar();
+});
+
+// arranque
+cargarNivel(0);
+</script>
+</body>
+</html>
